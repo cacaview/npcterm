@@ -101,19 +101,13 @@ impl TerminalEmulator {
         } else {
             #[cfg(target_os = "windows")]
             {
-                // Use PowerShell on Windows to avoid console window
-                let ps_path = std::path::PathBuf::from(
-                    std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".to_string())
-                        .replace('/', "\\")
-                        + "\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-                );
-                if ps_path.exists() {
-                    let mut cmd = CommandBuilder::new(ps_path);
-                    cmd.args(["-NoProfile", "-NoLogo", "-Command", "prompt"]);
-                    cmd
-                } else {
-                    CommandBuilder::new_default_prog()
-                }
+                // Use cmd.exe as default shell on Windows
+                // Note: This will show a console window for the child process.
+                // To avoid the window, use PowerShell with -Command "prompt" or
+                // use a shell like pwsh.exe (PowerShell Core) which supports
+                // better window hiding options.
+                let mut cmd = CommandBuilder::new("cmd.exe");
+                cmd
             }
             #[cfg(not(target_os = "windows"))]
             CommandBuilder::new_default_prog()

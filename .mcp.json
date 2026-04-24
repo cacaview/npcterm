@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "npcterm": {
-      "command": "/Users/aquintanar/Development/npcterm/dist/npcterm-macos-arm64",
+      "command": "H:/ai/npcterm/target/release/npcterm.exe",
       "args": []
     }
   }

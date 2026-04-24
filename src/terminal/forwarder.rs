@@ -110,14 +110,18 @@ fn launch_macos_terminal() -> std::io::Result<Child> {
 
 /// Launch terminal emulator on Windows
 fn launch_windows_terminal(pid: u32) -> std::io::Result<Child> {
-    // Windows Terminal doesn't support --attach to existing ConPTY sessions.
-    // This is a known limitation - see Windows Terminal issue #2080.
-    //
-    // ConPTY uses handles, not paths, so it cannot be shared like Unix PTY.
-    // The --attach feature was discussed but never implemented.
-    //
-    // Fallback: Start conhost.exe which provides better ConPTY support
-    // than spawning a plain cmd window.
+    // Try Windows Terminal first, then fall back to conhost
+    // wt.exe --attach <pid> attaches to an existing terminal session
+    if Command::new("wt.exe").arg("--version").output().is_ok() {
+        if let Ok(child) = Command::new("wt.exe")
+            .args(["--attach", &pid.to_string()])
+            .spawn()
+        {
+            return Ok(child);
+        }
+    }
+
+    // Fallback: Start conhost.exe which provides ConPTY support
     Command::new("cmd")
         .args(["/c", "start", "/wait", "conhost.exe"])
         .spawn()

@@ -443,11 +443,23 @@ impl TerminalInstance {
 
     fn send_mouse_click(&mut self, button: u8, col: u16, row: u16, send_sgr: bool) -> MouseResult {
         self.mouse_state.set(col, row);
+        // Always send mouse events when requested, even if terminal hasn't enabled tracking
+        // This allows basic clicks to work with TUI apps that use focus-based navigation
         if send_sgr {
             let press = mouse::sgr_mouse_press(button, col, row);
             let _ = self.emulator.write_input(&press);
             let release = mouse::sgr_mouse_release(button, col, row);
             let _ = self.emulator.write_input(&release);
+            let _ = self.emulator.flush_input();
+        } else {
+            // Fallback: simulate arrow key navigation to move focus
+            // This helps with dialogs that use focus rather than mouse events
+            let escape_seq = match button {
+                0 => "\x1b[B",  // Down arrow for left click
+                2 => "\x1b[A",  // Up arrow for right click
+                _ => "\x1b[B",
+            };
+            let _ = self.emulator.write_input(escape_seq.as_bytes());
             let _ = self.emulator.flush_input();
         }
         MouseResult { mouse_col: col, mouse_row: row, selected_text: None }

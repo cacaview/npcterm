@@ -109,22 +109,15 @@ fn launch_macos_terminal() -> std::io::Result<Child> {
 }
 
 /// Launch terminal emulator on Windows
-fn launch_windows_terminal(pid: u32) -> std::io::Result<Child> {
-    // Try Windows Terminal first, then fall back to conhost
-    // wt.exe --attach <pid> attaches to an existing terminal session
-    if Command::new("wt.exe").arg("--version").output().is_ok() {
-        if let Ok(child) = Command::new("wt.exe")
-            .args(["--attach", &pid.to_string()])
-            .spawn()
-        {
-            return Ok(child);
-        }
-    }
-
-    // Fallback: Start conhost.exe which provides ConPTY support
-    Command::new("cmd")
-        .args(["/c", "start", "/wait", "conhost.exe"])
-        .spawn()
+///
+/// Note: Windows Terminal (wt.exe) does not support attaching to arbitrary ConPTY
+/// sessions. The --attach flag is only for attaching to Windows Terminal server processes.
+/// On Windows, we simply return an error since terminal forwarding is not supported.
+fn launch_windows_terminal(_pid: u32) -> std::io::Result<Child> {
+    Err(std::io::Error::new(
+        std::io::ErrorKind::Unsupported,
+        "Terminal forwarding is not supported on Windows. ConPTY handles cannot be shared.",
+    ))
 }
 
 /// Launch a terminal emulator attached to the specified PTY slave

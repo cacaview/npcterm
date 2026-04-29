@@ -149,6 +149,30 @@ fn open_browser(url: &str) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(feature = "gui")]
+fn launch_gui_for_terminal(id: &str, reg: &mut TerminalRegistry) -> Result<String, ToolError> {
+    use crate::terminal::gui::GuiTerminal;
+    use crate::terminal::emulator::TerminalEmulator;
+
+    let instance = get_instance(reg, id)?;
+
+    let cols = instance.cols();
+    let rows = instance.rows();
+    let shell = None; // Use default shell
+
+    // Create a new emulator for the GUI (separate from the MCP instance)
+    let emulator = TerminalEmulator::new(cols, rows, shell)
+        .map_err(|e| ToolError::new(format!("Failed to create emulator for GUI: {}", e)))?;
+
+    // Spawn GUI in a separate thread
+    std::thread::spawn(move || {
+        let gui = GuiTerminal::new(cols, rows);
+        gui.run(emulator);
+    });
+
+    Ok(id.to_string())
+}
+
 #[server(name = "npcterm39", version = "1.3.3")]
 impl NpcTermServer {
     /// Create a new terminal instance. Returns {id, cols, rows}. The id is required for all subsequent terminal operations. Available sizes: 80x24 (default), 120x40, 160x40, 200x50.
@@ -228,6 +252,22 @@ impl NpcTermServer {
                 Err(ToolError::new(msg))
             }
         }
+    }
+
+    /// Launch a dedicated GUI window for this terminal. Opens a new window with software rendering
+    /// that displays the terminal output and handles keyboard/mouse input. The GUI runs in a
+    /// separate thread and communicates with the MCP server through the existing terminal instance.
+    /// Note: The GUI maintains its own PTY connection separate from the MCP instance.
+    #[cfg(feature = "gui")]
+    #[tool]
+    async fn terminal_launch_gui(
+        &self,
+        #[description("Terminal ID")] id: String,
+    ) -> Result<String, ToolError> {
+        let mut reg = self.lock_registry()?;
+        launch_gui_for_terminal(&id, &mut reg)?;
+        self.log_interaction("terminal_launch_gui", Some(&id), json!({}), true, Some("GUI launched".into()));
+        Ok(json!({ "success": true, "terminal_id": id, "message": "GUI window launched" }).to_string())
     }
 
     /// Send a single keystroke. Supports: a-z, Enter, Tab, Escape, Backspace, Delete, arrows, Home, End, PageUp, PageDown, F1-F12, Ctrl+key, Alt+key, space. For multiple keystrokes or text input, use terminal_send_keys instead.

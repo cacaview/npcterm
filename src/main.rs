@@ -11,18 +11,59 @@ use std::time::Duration;
 use turbomcp::prelude::*;
 use turbomcp_server::ProtocolVersion;
 
+#[cfg(feature = "gui")]
+fn run_gui_mode(cols: usize, rows: usize, shell: Option<&str>) {
+    use crate::terminal::emulator::TerminalEmulator;
+    use crate::terminal::gui::GuiTerminal;
+
+    let emulator = TerminalEmulator::new(cols, rows, shell)
+        .expect("Failed to create terminal emulator");
+
+    let gui = GuiTerminal::new(cols, rows);
+    gui.run(emulator);
+}
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
     // Parse CLI args
     let mut args = std::env::args().skip(1);
+    let mut gui_mode = false;
+    let mut gui_cols = 80;
+    let mut gui_rows = 24;
+    let mut gui_shell = None;
+
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--version" | "-v" => {
                 println!("npcterm {}", env!("CARGO_PKG_VERSION"));
                 return;
             }
+            "--gui" => {
+                gui_mode = true;
+            }
+            "--size" | "-s" => {
+                if let Some(size) = args.next() {
+                    match size.as_str() {
+                        "120x40" => { gui_cols = 120; gui_rows = 40; }
+                        "160x40" => { gui_cols = 160; gui_rows = 40; }
+                        "200x50" => { gui_cols = 200; gui_rows = 50; }
+                        _ => { gui_cols = 80; gui_rows = 24; }
+                    }
+                }
+            }
+            "--shell" => {
+                if let Some(shell) = args.next() {
+                    gui_shell = Some(shell);
+                }
+            }
             _ => {}
         }
+    }
+
+    #[cfg(feature = "gui")]
+    if gui_mode {
+        run_gui_mode(gui_cols, gui_rows, gui_shell.as_deref());
+        return;
     }
 
     #[cfg(feature = "viewer")]

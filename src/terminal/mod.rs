@@ -4,3 +4,5 @@ pub mod ansi_handler;
 pub mod emulator;
 pub mod selection;
 pub mod forwarder;
+#[cfg(feature = "gui")]
+pub mod gui;

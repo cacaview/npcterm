@@ -409,6 +409,19 @@ impl TerminalInstance {
 
     // --- Viewer support ---
 
+    /// Get the emulator (for GUI forwarding)
+    #[cfg(feature = "gui")]
+    pub fn emulator(&self) -> &TerminalEmulator {
+        &self.emulator
+    }
+
+    /// Get a mutable reference to the emulator (for GUI sharing)
+    /// This allows the GUI to share the same PTY as the MCP instance
+    #[cfg(feature = "gui")]
+    pub fn emulator_mut(&mut self) -> &mut TerminalEmulator {
+        &mut self.emulator
+    }
+
     /// Get a reference to the grid (for viewer span compression)
     #[cfg(feature = "viewer")]
     pub fn grid(&self) -> &crate::terminal::grid::TerminalGrid {

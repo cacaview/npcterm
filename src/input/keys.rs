@@ -20,6 +20,7 @@ pub enum Key {
     F(u8),
     Ctrl(char),
     Alt(char),
+    ShiftTab,
 }
 
 impl Key {
@@ -58,12 +59,17 @@ impl Key {
                     return Err(format!("Invalid Ctrl combo: {}", s));
                 }
 
-                // Alt+X
+// Alt+X
                 if let Some(rest) = s.strip_prefix("Alt+").or_else(|| s.strip_prefix("alt+")) {
                     if rest.len() == 1 {
                         return Ok(Key::Alt(rest.chars().next().unwrap()));
                     }
                     return Err(format!("Invalid Alt combo: {}", s));
+                }
+
+                // Shift+Tab
+                if s.eq_ignore_ascii_case("Shift+Tab") || s.eq_ignore_ascii_case("ShiftTab") {
+                    return Ok(Key::ShiftTab);
                 }
 
                 // Function keys F1-F12
@@ -153,6 +159,7 @@ impl Key {
                 buf.extend_from_slice(s.as_bytes());
                 buf
             }
+            Key::ShiftTab => b"\x1b[Z".to_vec(),
         }
     }
 }
@@ -177,6 +184,7 @@ impl fmt::Display for Key {
             Key::F(n) => write!(f, "F{}", n),
             Key::Ctrl(c) => write!(f, "Ctrl+{}", c),
             Key::Alt(c) => write!(f, "Alt+{}", c),
+            Key::ShiftTab => write!(f, "Shift+Tab"),
         }
     }
 }
